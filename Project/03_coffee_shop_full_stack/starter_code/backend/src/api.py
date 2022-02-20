@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, jsonify, abort
+from flask import Flask, request, jsonify, abort, Response
 from sqlalchemy import exc
 import json
 from flask_cors import CORS
@@ -18,27 +18,48 @@ CORS(app)
 !! Running this funciton will add one
 '''
 # db_drop_and_create_all()
+@app.errorhandler(AuthError)
+def handle_auth_error(ex: AuthError) -> Response:
+    """
+    serializes the given AuthError as json and sets the response status code accordingly.
+    :param ex: an auth error
+    :return: json serialized ex response
+    """
+    response = jsonify(ex.error)
+    response.status_code = ex.status_code
+    return response
+
+# CORS Headers
+# @app.after_request
+# def after_request(response):
+#     response.headers.add(
+#         "Access-Control-Allow-Headers", "Content-Type,Authorization,true"
+#     )
+#     response.headers.add(
+#         "Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS"
+#     )
+#     return response
+
 
 # ROUTES
-'''
-@TODO implement endpoint
-    GET /drinks
-        it should be a public endpoint
-        it should contain only the drink.short() data representation
-    returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
-        or appropriate status code indicating reason for failure
-'''
+
+@app.route("/drinks")
+def retrieve_categories():
+    drinks = Drink.query.all()
+    if not drinks:
+        abort(404)
+    drinks_list = [drink.short() for drink in drinks]
+    return jsonify({'success': True, "drinks": drinks_list})
 
 
-'''
-@TODO implement endpoint
-    GET /drinks-detail
-        it should require the 'get:drinks-detail' permission
-        it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drinks} where drinks is the list of drinks
-        or appropriate status code indicating reason for failure
-'''
-
+@app.route('/drinks-detail')
+@requires_auth('get:drinks-detail')
+def images(jwt):
+    drinks = Drink.query.all()
+    if not drinks:
+        abort(404)
+    drinks_list = [drink.long() for drink in drinks]
+    return jsonify({'success': True, "drinks": drinks_list})
 
 '''
 @TODO implement endpoint
@@ -46,11 +67,25 @@ CORS(app)
         it should create a new row in the drinks table
         it should require the 'post:drinks' permission
         it should contain the drink.long() data representation
-    returns status code 200 and json {"success": True, "drinks": drink} where drink an array containing only the newly created drink
+    returns status code 200 and json {"success": True, "drinks": drink}
+     where drink an array containing  only the newly created drink
         or appropriate status code indicating reason for failure
 '''
 
 
+@app.route("/drinks", methods=["POST"])
+@requires_auth('post:drinks')
+def create_drink(jwt):
+    body = request.get_json()
+    try:
+        title = body.get("title")
+        recipe = json.dumps(body.get("recipe"))
+        drink_object = Drink(title=title, recipe=recipe)
+        drink_object.insert()
+        drinks_list = [drink_object.long()]
+        return jsonify({'success': True, "drinks": drinks_list})
+    except:
+        abort(422)
 '''
 @TODO implement endpoint
     PATCH /drinks/<id>

@@ -72,7 +72,14 @@ export class AuthService {
     this.token = '';
     this.payload = null;
     this.set_jwt();
+    let redirectLink =  'https://';
+    redirectLink += this.url + '.auth0.com/v2/logout?returnTo=';
+    redirectLink += this.callbackURL;
+    redirectLink += '%2F&client_id=';
+    redirectLink += this.clientId;
+    window.location.href = redirectLink;
   }
+
 
   can(permission: string) {
     return this.payload && this.payload.permissions && this.payload.permissions.length && this.payload.permissions.indexOf(permission) >= 0;
