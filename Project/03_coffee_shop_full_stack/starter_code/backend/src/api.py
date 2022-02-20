@@ -17,7 +17,7 @@ CORS(app)
 !! NOTE THIS MUST BE UNCOMMENTED ON FIRST RUN
 !! Running this funciton will add one
 '''
-# db_drop_and_create_all()
+db_drop_and_create_all()
 
 # ROUTES
 
@@ -46,7 +46,13 @@ def create_drink(jwt):
     body = request.get_json()
     try:
         title = body.get("title")
-        recipe = json.dumps(body.get("recipe"))
+        recipe = body.get("recipe")
+        if isinstance(recipe, dict):
+            recipe = [recipe]
+        recipe = json.dumps(recipe)
+        print('====')
+        print(recipe)
+        print('=====')
         drink_object = Drink(title=title, recipe=recipe)
         drink_object.insert()
         drinks_list = [drink_object.long()]
